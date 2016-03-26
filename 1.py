@@ -139,17 +139,17 @@ results = []
 for i in range (0, numberOfRuns):
 	firstRun = wasEffective(signals[2*i], speeds[2*i])
 	secondRun = wasEffective(signals[2*i+1], speeds[2*i+1])
-	print firstRun
-	print secondRun
+	# print firstRun
+	# print secondRun
 	k1 = firstRun[0] + firstRun[1] + firstRun[2]
 	k2 = secondRun[0] + secondRun[1] + secondRun[2]
 
 	result = (firstRun[0] * k2 - secondRun[0] * k1, firstRun[1] * k2 - secondRun[1] * k1, firstRun[2] * k2 - secondRun[2] * k1)
 	results.append(result)
-	print results[i]
-	print ""
+# 	print results[i]
+# 	print ""
 
-print "\n"
+# print "\n"
 
 def myError(n1, n2):
 	if n1 > n2:
@@ -161,14 +161,16 @@ def myError(n1, n2):
 
 for i in range (0, numberOfRuns):
 	deltas = deltaSpeed(speeds[2 * i], speeds[(2 * i) + 1], targetSpeeds[i])
-	print deltas
+	# print deltas
 	# print myError(math.fabs(deltas[0]), math.fabs(deltas[1]))
 
-print ""
+# print ""
 
-for i in range (0, numberOfRuns):
-	print str(deviation(speeds[(2 * i)], targetSpeeds[i])) + " " + str(deviation(speeds[(2 * i) + 1], targetSpeeds[i]))
-print ""
+# for i in range (0, numberOfRuns):
+# 	print str(deviation(speeds[(2 * i)], targetSpeeds[i])) + " " + str(deviation(speeds[(2 * i) + 1], targetSpeeds[i]))
+# print ""
+
+
 # Here the confusion matrix starts
 def findChange(speed, target):
 	# 2 is increase
@@ -277,9 +279,8 @@ def percentify(m):
 
 finalResults = [[],[],[]]
 threshhold = 0
-for k in range (1, 20):
-	threshhold += 0.01
-	print "threshhold = " + str(threshhold)
+for k in range (1, 300):
+	threshhold += 0.001
 	matrixSum = [[0,0,0],[0,0,0],[0,0,0]]
 
 	for i in range(0, len(speeds)/2):
@@ -306,20 +307,7 @@ for k in range (1, 20):
 	# print "major mistake: " + str(matrixSum[0][2] + matrixSum[2][0]) + "%"
 	# print ""
 
-changes = []
-for i in range(0, len(speeds)/2):
-	for j in range(0, len(speeds[2 * i]) - 1):
-		speedDiff = float(speeds[2 * i][j + 1]) - float(speeds[2 * i][j])
-		if signals[2 * i][j] == slow :
-			if speedDiff > 0:
-				changes.append(float(speedDiff) / targetSpeeds[i])
-
-		if signals[2 * i][j] == fast :
-			if speedDiff < 0:
-				changes.append(float(speedDiff) / targetSpeeds[i])
-
-print len(changes)
-
+# This part deals with deltaspeed distrobution for with and without watch
 def frequencyOfOccurance(list, min, max):
 	frequency = 0
 	for element in list:
@@ -328,28 +316,134 @@ def frequencyOfOccurance(list, min, max):
 				frequency += 1
 	return frequency
 
+changes = []
+for i in range(0, len(speeds)/2):
+	for j in range(0, len(speeds[2 * i]) - 1):
+		speedDiff = float(speeds[2 * i][j + 1]) - float(speeds[2 * i][j])
+		if signals[2 * i][j] == slow :
+			if speedDiff > 0:
+				if signals[2 * i][j + 1] == correct or signals[2 * i][j + 1] == fast:
+					changes.append(float(speedDiff) / targetSpeeds[i])
+
+		if signals[2 * i][j] == fast :
+			if speedDiff < 0:
+				if signals[2 * i][j + 1] == correct or signals[2 * i][j + 1] == slow:
+					changes.append(float(speedDiff) / targetSpeeds[i])
+
+
+changes1 = []
+for i in range(0, len(speeds)/2):
+	index = 2 * i + 1
+	for j in range(0, len(speeds[index]) - 1):
+		speedDiff = float(speeds[index][j + 1]) - float(speeds[index][j])
+		if signals[index][j] == slow :
+			if speedDiff > 0:
+				changes1.append(float(speedDiff) / targetSpeeds[i])
+
+		if signals[index][j] == fast :
+			if speedDiff < 0:
+				changes1.append(float(speedDiff) / targetSpeeds[i])
+
 freq = []
 for i in range(0,20):
 	min = i * 0.2 - 2
 	max = (i+1) * 0.2 - 2
 	freq.append(frequencyOfOccurance(changes, min, max))
 
-print freq
+freq1 = []
+for i in range(0,20):
+	min = i * 0.2 - 2
+	max = (i+1) * 0.2 - 2
+	freq1.append(frequencyOfOccurance(changes1, min, max))
+
+def plotDeltaDistribution(freq, freq1):
+	plt.plot(freq)
+	plt.plot(freq1)
+	plt.ylabel("delta speed")
+	plt.show()
+
+def plotThresholdPerception(correct, incorrect, veryIncorrect):
+	plt.plot(correct)
+	plt.plot(incorrect)
+	plt.plot(veryIncorrect)
+	plt.ylabel('threshhold')
+	plt.show()
 
 
-plt.plot(freq)
-plt.ylabel("delta speed")
-plt.show()
-# best = 0;
-# for i in range(len(finalResults[0])):
-# 	if (best < finalResults[0][i] - finalResults[1][i] - finalResults[2][i]):
-# 		print finalResults[0][i] - finalResults[1][i] - finalResults[2][i]
-# 		print i
-# 		best = finalResults[0][i] - finalResults[1][i] - finalResults[2][i]
-# the best one is 186
+# now we want to see if the sets are significantly different from each other
+diffFromTarget = []
+diffFromTarget1 = []
+for i in range(0, len(speeds)/2):
+	index = 2 * i
+	target = targetSpeeds[i]
+	for j in range(0, len(speeds[index])):
+		diffFromTarget.append((float(speeds[index][j]) - target) / target)
+	index = 2 * i + 1
+	for j in range(0, len(speeds[index])):
+		diffFromTarget1.append((float(speeds[index][j]) - target) / target)
 
-# plt.plot(finalResults[0])
-# plt.plot(finalResults[1])
-# plt.plot(finalResults[2])
-# plt.ylabel('threshhold')
-# plt.show()
+diffFromTarget.sort()
+diffFromTarget1.sort()
+
+deltaFrequency = []
+for i in range(0,20):
+	min = i * 0.2 - 2
+	max = (i+1) * 0.2 - 2
+	deltaFrequency.append(frequencyOfOccurance(diffFromTarget, min, max))
+
+deltaFrequency1 = []
+for i in range(0,20):
+	min = i * 0.2 - 2
+	max = (i+1) * 0.2 - 2
+	deltaFrequency1.append(frequencyOfOccurance(diffFromTarget1, min, max))
+
+# print deltaFrequency
+# print deltaFrequency1
+# plotDeltaDistribution(deltaFrequency, deltaFrequency1)
+
+# deltaspeed distributions for the ttest to see that they are significantly different from eachother and we're not just lucky
+allDeltas = []
+allDeltas1 = []
+for i in range(0, len(speeds)/2):
+	index = 2 * i
+	target = targetSpeeds[i]
+	for j in range(0, len(speeds[index]) - 1):
+		if signals[index][j] != correct:
+			allDeltas.append((float(speeds[index][j]) - float(speeds[index][j + 1])) / target)
+	index = 2 * i + 1
+	for j in range(0, len(speeds[index]) - 1):
+		if signals[index][j] != correct:
+			allDeltas1.append((float(speeds[index][j]) - float(speeds[index][j + 1])) / target)
+
+allDeltas.sort()
+allDeltas1.sort()
+# print len(allDeltas)
+
+allDeltaFrequency = []
+for i in range(0,20):
+	min = i * 0.2 - 2
+	max = (i+1) * 0.2 - 2
+	allDeltaFrequency.append(frequencyOfOccurance(allDeltas, min, max))
+
+allDeltaFrequency1 = []
+for i in range(0,20):
+	min = i * 0.2 - 2
+	max = (i+1) * 0.2 - 2
+	allDeltaFrequency1.append(frequencyOfOccurance(allDeltas1, min, max))
+
+print allDeltaFrequency
+print allDeltaFrequency1
+# plotDeltaDistribution(allDeltaFrequency, allDeltaFrequency1)
+
+fo = open("out.txt", "wb")
+for element in allDeltas:
+	fo.write(str(element)+"\n")
+fo.close()
+
+fo1 = open("out1.txt", "wb")
+for element in allDeltas1:
+	fo1.write(str(element)+"\n")
+fo1.close()
+
+plotThresholdPerception(finalResults[0], finalResults[1], finalResults[2])
+# plotDeltaDistribution(freq, freq1)
