@@ -278,12 +278,31 @@ def percentify(m):
 
 
 finalResults = [[],[],[]]
+halfFinalResults1 = [[],[],[]]
+halfFinalResults2 = [[],[],[]]
 threshhold = 0
 for k in range (1, 300):
 	threshhold += 0.001
 	matrixSum = [[0,0,0],[0,0,0],[0,0,0]]
-
+	halfSum1 = [[0,0,0],[0,0,0],[0,0,0]]
+	halfSum2 = [[0,0,0],[0,0,0],[0,0,0]]
 	for i in range(0, len(speeds)/2):
+		halfSpeeds1 = []
+		halfSpeeds2 = []
+		halfSignals1 = []
+		halfSignals2 = []
+		for l in range(0, len(speeds[i*2])):
+			if l < len(speeds[i*2])/2:
+				halfSpeeds1.append(speeds[i*2][l])
+				halfSignals1.append(signals[i*2][l])
+			else:
+				halfSpeeds2.append(speeds[i*2][l])
+				halfSignals2.append(signals[i*2][l])
+		halfMatrix1 = confusionMatrix(halfSpeeds1, targetSpeeds[i], halfSignals1)
+		halfMatrix2 = confusionMatrix(halfSpeeds2, targetSpeeds[i], halfSignals2)
+		halfSum1 = addMatrices(halfSum1, halfMatrix1)
+		halfSum2 = addMatrices(halfSum2, halfMatrix2)
+
 		tempMatrix = confusionMatrix(speeds[i * 2], targetSpeeds[i], signals[i * 2])
 		tempMatrix = percentify(tempMatrix)
 		matrixSum = addMatrices(matrixSum, tempMatrix)
@@ -294,6 +313,8 @@ for k in range (1, 300):
 
 
 	matrixSum = percentify(matrixSum)
+	halfSum1 = percentify(halfSum1)
+	halfSum2 = percentify(halfSum2)
 	# print matrixSum[0]
 	# print matrixSum[1]
 	# print matrixSum[2]
@@ -302,12 +323,37 @@ for k in range (1, 300):
 	finalResults[1].append(matrixSum[0][1] + matrixSum[1][0] + matrixSum[1][2] + matrixSum[2][1])
 	finalResults[2].append(matrixSum[0][2] + matrixSum[2][0])
 
+	halfFinalResults1[0].append(halfSum1[0][0] + halfSum1[1][1] + halfSum1[2][2])
+	halfFinalResults1[1].append(halfSum1[0][1] + halfSum1[1][0] + halfSum1[1][2] + halfSum1[2][1])
+	halfFinalResults1[2].append(halfSum1[0][2] + halfSum1[2][0])
+
+	halfFinalResults2[0].append(halfSum2[0][0] + halfSum2[1][1] + halfSum2[2][2])
+	halfFinalResults2[1].append(halfSum2[0][1] + halfSum2[1][0] + halfSum2[1][2] + halfSum2[2][1])
+	halfFinalResults2[2].append(halfSum2[0][2] + halfSum2[2][0])
+
+
+# length = len(halfFinalResults1[0])
+# xAxis = []
+# for i in range(0, length):
+# 	xAxis.append((i)*0.001)
+# plt.plot(xAxis, halfFinalResults1[0])
+# plt.plot(xAxis, halfFinalResults2[0])
+# plt.plot(xAxis, halfFinalResults1[1])
+# plt.plot(xAxis, halfFinalResults2[1])
+# plt.plot(xAxis, halfFinalResults1[2])
+# plt.plot(xAxis, halfFinalResults2[2])
+# plt.xlabel('Threshold')
+# plt.ylabel('Percent')
+# plt.show()
+
+
+
 	# print "correct: " + str(matrixSum[0][0] + matrixSum[1][1] + matrixSum[2][2]) + "%"
 	# print "small mistake: " + str(matrixSum[0][1] + matrixSum[1][0] + matrixSum[1][2] + matrixSum[2][1]) + "%"
 	# print "major mistake: " + str(matrixSum[0][2] + matrixSum[2][0]) + "%"
 	# print ""
 
-# This part deals with deltaspeed distrobution for with and without watch
+# This part deals with deltaspeed distribution for with and without watch
 def frequencyOfOccurance(list, min, max):
 	frequency = 0
 	for element in list:
@@ -363,10 +409,15 @@ def plotDeltaDistribution(freq, freq1):
 	plt.show()
 
 def plotThresholdPerception(correct, incorrect, veryIncorrect):
-	plt.plot(correct)
-	plt.plot(incorrect)
-	plt.plot(veryIncorrect)
-	plt.ylabel('threshhold')
+	length = len(correct)
+	xAxis = []
+	for i in range(0, length):
+		xAxis.append((i)*0.001)
+	plt.plot(xAxis, correct)
+	plt.plot(xAxis, incorrect)
+	plt.plot(xAxis, veryIncorrect)
+	plt.xlabel('Threshold')
+	plt.ylabel('Percent')
 	plt.show()
 
 
@@ -445,5 +496,5 @@ for element in allDeltas1:
 	fo1.write(str(element)+"\n")
 fo1.close()
 
-plotThresholdPerception(finalResults[0], finalResults[1], finalResults[2])
+# plotThresholdPerception(finalResults[0], finalResults[1], finalResults[2])
 # plotDeltaDistribution(freq, freq1)
