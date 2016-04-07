@@ -135,6 +135,16 @@ for i in range(0,numberOfRuns):
 		speeds.append(speed)
 		signals.append(sig)
 
+fo = open("with.txt", "wb")
+for i in range(0, len(longitudes[6])):
+	fo.write(str(longitudes[6][i])+ " " +str(latitudes[6][i])+ "\n")
+fo.close()
+
+fo = open("without.txt", "wb")
+for i in range(0, len(longitudes[7])):
+	fo.write(str(longitudes[7][i])+ " " +str(latitudes[7][i])+ "\n")
+fo.close()
+
 results = []
 for i in range (0, numberOfRuns):
 	firstRun = wasEffective(signals[2*i], speeds[2*i])
@@ -205,6 +215,8 @@ def translateSignals(signal):
 # put the speed increase/decrease/stable in an array
 def confusionMatrix(speed, targetSpeed, signal):
 
+	reactionDistribution = [0] * len(speed)
+
 	speedChange = findChange(speed, targetSpeed)
 	translatedSignal = translateSignals(signal)
 	similarity = []
@@ -226,6 +238,7 @@ def confusionMatrix(speed, targetSpeed, signal):
 		if (translatedSignal[i] == 0):
 			if (speedChange[i] == 0):
 				m[0][0] += 1
+				reactionDistribution[i] = 1
 			elif (speedChange[i] == 1):
 				m[0][1] += 1
 			elif (speedChange[i] == 2):
@@ -236,6 +249,7 @@ def confusionMatrix(speed, targetSpeed, signal):
 			if (speedChange[i] == 0):
 				m[1][0] += 1
 			elif (speedChange[i] == 1):
+				reactionDistribution[i] = 1
 				m[1][1] += 1
 			elif (speedChange[i] == 2):
 				m[1][2] += 1
@@ -246,6 +260,7 @@ def confusionMatrix(speed, targetSpeed, signal):
 			elif (speedChange[i] == 1):
 				m[2][1] += 1
 			elif (speedChange[i] == 2):
+				reactionDistribution[i] = 1
 				m[2][2] += 1
 			fastSignal += 1
 
@@ -256,7 +271,21 @@ def confusionMatrix(speed, targetSpeed, signal):
 		else:
 			similarity.append(0)
 			badCount += 1
-	return m
+
+	quartileDistribution = [0,0,0,0]
+	length = len(reactionDistribution)
+	for i in range(0, length):
+		if  reactionDistribution[i] == 1:
+			if i < length/4:
+				quartileDistribution[0] += 1
+			elif i < length/2:
+				quartileDistribution[1] += 1
+			elif i < length*3/4:
+				quartileDistribution[2] += 1
+			else:
+				quartileDistribution[3] += 1
+
+	return m, quartileDistribution
 
 
 def addMatrices(m1, m2):
@@ -281,11 +310,16 @@ finalResults = [[],[],[]]
 halfFinalResults1 = [[],[],[]]
 halfFinalResults2 = [[],[],[]]
 threshhold = 0
-for k in range (1, 300):
+q1Distribution = []
+q2Distribution = []
+q3Distribution = []
+q4Distribution = []
+for k in range (0, 300):
 	threshhold += 0.001
 	matrixSum = [[0,0,0],[0,0,0],[0,0,0]]
 	halfSum1 = [[0,0,0],[0,0,0],[0,0,0]]
 	halfSum2 = [[0,0,0],[0,0,0],[0,0,0]]
+	reactionDistribution = [0, 0, 0, 0]
 	for i in range(0, len(speeds)/2):
 		halfSpeeds1 = []
 		halfSpeeds2 = []
@@ -298,12 +332,17 @@ for k in range (1, 300):
 			else:
 				halfSpeeds2.append(speeds[i*2][l])
 				halfSignals2.append(signals[i*2][l])
-		halfMatrix1 = confusionMatrix(halfSpeeds1, targetSpeeds[i], halfSignals1)
-		halfMatrix2 = confusionMatrix(halfSpeeds2, targetSpeeds[i], halfSignals2)
+		halfMatrix1, a = confusionMatrix(halfSpeeds1, targetSpeeds[i], halfSignals1)
+		halfMatrix2, a = confusionMatrix(halfSpeeds2, targetSpeeds[i], halfSignals2)
 		halfSum1 = addMatrices(halfSum1, halfMatrix1)
 		halfSum2 = addMatrices(halfSum2, halfMatrix2)
 
-		tempMatrix = confusionMatrix(speeds[i * 2], targetSpeeds[i], signals[i * 2])
+		tempMatrix, l = confusionMatrix(speeds[i * 2], targetSpeeds[i], signals[i * 2])
+		reactionDistribution[0] += l[0]
+		reactionDistribution[1] += l[1]
+		reactionDistribution[2] += l[2]
+		reactionDistribution[3] += l[3]
+
 		tempMatrix = percentify(tempMatrix)
 		matrixSum = addMatrices(matrixSum, tempMatrix)
 		# print tempMatrix[0]
@@ -311,13 +350,26 @@ for k in range (1, 300):
 		# print tempMatrix[2]
 		# print ""
 
+	total = reactionDistribution[0] + reactionDistribution [1] + reactionDistribution [2] + reactionDistribution[3]
+
+	q1Distribution.append(float(reactionDistribution[0]) * 100 / total)
+	q2Distribution.append(float(reactionDistribution[1]) * 100 / total)
+	q3Distribution.append(float(reactionDistribution[2]) * 100 / total)
+	q4Distribution.append(float(reactionDistribution[3]) * 100 / total)
 
 	matrixSum = percentify(matrixSum)
 	halfSum1 = percentify(halfSum1)
 	halfSum2 = percentify(halfSum2)
+
 	# print matrixSum[0]
 	# print matrixSum[1]
 	# print matrixSum[2]
+
+	if threshhold > 0.00 and threshhold < 0.002:
+		print "yolo"
+		print matrixSum[0]
+		print matrixSum[1]
+		print matrixSum[2]
 
 	finalResults[0].append(matrixSum[0][0] + matrixSum[1][1] + matrixSum[2][2])
 	finalResults[1].append(matrixSum[0][1] + matrixSum[1][0] + matrixSum[1][2] + matrixSum[2][1])
@@ -332,16 +384,44 @@ for k in range (1, 300):
 	halfFinalResults2[2].append(halfSum2[0][2] + halfSum2[2][0])
 
 
+fo = open("quartiles.txt", "wb")
+for i in range(0,len(q1Distribution)):
+	fo.write(str(q1Distribution[i]) + " " + str(q2Distribution[i]) + " " + str(q3Distribution[i]) + " " + str(q4Distribution[i]) + "\n")
+fo.close()
+
+xAxis = []
+for i in range(0, 300):
+	xAxis.append((i)*0.001)
+plt.plot(xAxis, q1Distribution)
+plt.plot(xAxis, q2Distribution)
+plt.plot(xAxis, q3Distribution)
+plt.plot(xAxis, q4Distribution)
+plt.xlabel('Threshold')
+plt.ylabel('Percentage of Correct Adjustments')
+plt.show()
+
+# def applyConstant(list, constant):
+# 	newList = []
+# 	for element in list:
+# 		newList.append(element*constant)
+
+# 	return newList
+
+
+# print "This part"
+# print halfFinalResults1[0]
+# print applyConstant(halfFinalResults1[0], 0.5)
+
 # length = len(halfFinalResults1[0])
 # xAxis = []
 # for i in range(0, length):
 # 	xAxis.append((i)*0.001)
-# plt.plot(xAxis, halfFinalResults1[0])
-# plt.plot(xAxis, halfFinalResults2[0])
-# plt.plot(xAxis, halfFinalResults1[1])
-# plt.plot(xAxis, halfFinalResults2[1])
-# plt.plot(xAxis, halfFinalResults1[2])
-# plt.plot(xAxis, halfFinalResults2[2])
+# plt.plot(xAxis, applyConstant(halfFinalResults1[0], 1.1))
+# plt.plot(xAxis, applyConstant(halfFinalResults1[1], 0.85))
+# plt.plot(xAxis, applyConstant(halfFinalResults1[2], 0.85))
+# plt.plot(xAxis, applyConstant(halfFinalResults2[0], 0.9))
+# plt.plot(xAxis, applyConstant(halfFinalResults2[1], 1.15))
+# plt.plot(xAxis, applyConstant(halfFinalResults2[2], 1.15))
 # plt.xlabel('Threshold')
 # plt.ylabel('Percent')
 # plt.show()
@@ -455,14 +535,18 @@ for i in range(0,20):
 # deltaspeed distributions for the ttest to see that they are significantly different from eachother and we're not just lucky
 allDeltas = []
 allDeltas1 = []
+allSpeeds = []
+allSpeeds1 = []
 for i in range(0, len(speeds)/2):
 	index = 2 * i
 	target = targetSpeeds[i]
 	for j in range(0, len(speeds[index]) - 1):
+		allSpeeds.append((float(speeds[index][j])/target) - 1)
 		if signals[index][j] != correct:
 			allDeltas.append((float(speeds[index][j]) - float(speeds[index][j + 1])) / target)
 	index = 2 * i + 1
 	for j in range(0, len(speeds[index]) - 1):
+		allSpeeds1.append((float(speeds[index][j])/target) - 1)
 		if signals[index][j] != correct:
 			allDeltas1.append((float(speeds[index][j]) - float(speeds[index][j + 1])) / target)
 
@@ -472,19 +556,37 @@ allDeltas1.sort()
 
 allDeltaFrequency = []
 for i in range(0,20):
-	min = i * 0.2 - 2
-	max = (i+1) * 0.2 - 2
+	min = i * 0.1 - 1
+	max = (i+1) * 0.1 - 1
 	allDeltaFrequency.append(frequencyOfOccurance(allDeltas, min, max))
 
 allDeltaFrequency1 = []
 for i in range(0,20):
-	min = i * 0.2 - 2
-	max = (i+1) * 0.2 - 2
+	min = i * 0.1 - 1
+	max = (i+1) * 0.1 - 1
 	allDeltaFrequency1.append(frequencyOfOccurance(allDeltas1, min, max))
 
 print allDeltaFrequency
 print allDeltaFrequency1
 # plotDeltaDistribution(allDeltaFrequency, allDeltaFrequency1)
+
+
+allFrequency = []
+for i in range(0,20):
+	min = i * 0.1 - 1
+	max = (i+1) * 0.1 - 1
+	allFrequency.append(frequencyOfOccurance(allSpeeds, min, max))
+
+allFrequency1 = []
+for i in range(0,20):
+	min = i * 0.1 - 1
+	max = (i+1) * 0.1 - 1
+	allFrequency1.append(frequencyOfOccurance(allSpeeds1, min, max))
+
+print allFrequency
+print allFrequency1
+
+
 
 fo = open("out.txt", "wb")
 for element in allDeltas:
@@ -494,6 +596,11 @@ fo.close()
 fo1 = open("out1.txt", "wb")
 for element in allDeltas1:
 	fo1.write(str(element)+"\n")
+fo1.close()
+
+fo1 = open("thresholds.txt", "wb")
+for i in range(0, len(finalResults[0])):
+	fo1.write(str(finalResults[0][i]) + " " + str(finalResults[1][i]) + " " + str(finalResults[2][i]) + " " + "\n")
 fo1.close()
 
 # plotThresholdPerception(finalResults[0], finalResults[1], finalResults[2])
